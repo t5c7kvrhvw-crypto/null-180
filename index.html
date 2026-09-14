@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050505">
+<title>19.1.13.19.15.14</title>
+<style>
+:root{--bg:#050505;--fg:#f3f3ef;--muted:#787878;--line:#262626;--ok:#d7ff5b;--bad:#ff6b63}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--fg);font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+body{min-height:100svh;overflow-x:hidden}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(to bottom,rgba(255,255,255,.018) 0,rgba(255,255,255,.018) 1px,transparent 1px,transparent 4px);opacity:.45}
+.top{display:flex;justify-content:space-between;padding:22px 24px;color:#777;font-size:12px;letter-spacing:.18em;position:relative;z-index:2}
+.status{display:flex;gap:8px;align-items:center}.dot{width:7px;height:7px;border-radius:50%;background:#b5302b;box-shadow:0 0 16px #b5302b}
+main{position:relative;z-index:2;width:min(900px,100%);margin:0 auto;padding:9vh 18px 70px}
+.card{border:1px solid var(--line);background:#090909;padding:clamp(26px,6vw,56px);min-height:420px}
+.kicker{font-size:11px;letter-spacing:.2em;color:#6f6f6f;text-transform:uppercase;margin-bottom:22px}
+h1{font-size:clamp(34px,9vw,76px);line-height:.94;letter-spacing:-.055em;text-transform:uppercase;margin:0 0 24px}
+.copy{font-size:clamp(14px,2.2vw,17px);line-height:1.65;color:#b6b6b6;max-width:680px}
+.bigcode{font-size:clamp(27px,8vw,62px);letter-spacing:.12em;margin:38px 0 26px}
+.form{display:flex;gap:10px;max-width:650px}
+input{flex:1;min-width:0;background:#050505;border:1px solid #333;color:#fff;padding:16px;font:inherit;font-size:16px;outline:none;-webkit-appearance:none}
+input:focus{border-color:#777}
+button{background:#f2f2ed;color:#060606;border:0;padding:16px 18px;font:700 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;cursor:pointer;-webkit-appearance:none}
+.feedback{min-height:24px;margin-top:12px;font-size:12px;color:#747474}.feedback.bad{color:var(--bad)}.feedback.good{color:var(--ok)}
+.lines{display:grid;gap:11px;margin:30px 0}.lines div{border-left:1px solid #333;padding:8px 12px;color:#999}.lines b{color:#fff}
+.prize{border:1px solid #333;padding:28px;background:#070707;margin:30px 0}.prize small{color:#666;letter-spacing:.16em}.prize strong{display:block;font-size:clamp(44px,12vw,90px);margin-top:8px}
+.specgrid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#252525;margin:30px 0}.spec{background:#090909;padding:20px}.spec small{display:block;color:#666;margin-bottom:7px}.spec b{font-size:23px}
+.meta{margin-top:34px;padding-top:18px;border-top:1px solid #1a1a1a;color:#4e4e4e;font-size:10px;letter-spacing:.13em;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.hidden{display:none!important}
+.version{position:fixed;right:12px;bottom:10px;color:#242424;font-size:9px;z-index:3}
+@media(max-width:620px){main{padding-top:7vh}.form{flex-direction:column}.form button{width:100%}.specgrid{grid-template-columns:1fr}.card{min-height:0}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div>PROTOCOL / 180</div>
+  <div class="status"><span class="dot"></span><span id="status">LOCKED</span></div>
+</div>
+
+<main>
+  <section class="card" id="card">
+    <!-- STATIC FALLBACK: this is intentionally visible even if JavaScript fails -->
+    <div class="kicker">IDENTITY CHECK / 01</div>
+    <h1>Ты уже внутри.</h1>
+    <div class="copy">
+      Подсказок не будет. Они здесь и не нужны.<br><br>
+      У системы есть один вопрос: <b>кто должен пройти дальше?</b>
+    </div>
+    <div class="bigcode">19 · 1 · 13 · 19 · 15 · 14</div>
+    <div class="form">
+      <input id="answer" type="text" autocomplete="off" autocapitalize="characters" placeholder="KEY">
+      <button id="submit" type="button">ENTER</button>
+    </div>
+    <div class="feedback" id="feedback"></div>
+    <div class="meta"><span>SESSION 01</span><span>NO EXTERNAL HELP REQUIRED</span></div>
+  </section>
+</main>
+<div class="version">BUILD 3.0</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var card = document.getElementById("card");
+  var status = document.getElementById("status");
+  var stage = 0;
+  var attempts = 0;
+
+  function norm(s){
+    return String(s || "")
+      .trim()
+      .toUpperCase()
+      .replace(/Ё/g,"Е")
+      .replace(/[^A-ZА-Я0-9]/g,"");
+  }
+
+  function feedback(text, good){
+    var el = document.getElementById("feedback");
+    if(!el) return;
+    el.textContent = text;
+    el.className = "feedback " + (good ? "good" : "bad");
+  }
+
+  function shell(kicker,title,copy,extra,session){
+    card.innerHTML =
+      '<div class="kicker">'+kicker+'</div>'+
+      '<h1>'+title+'</h1>'+
+      '<div class="copy">'+copy+'</div>'+
+      extra+
+      '<div class="meta"><span>SESSION '+session+'</span><span>NO EXTERNAL HELP REQUIRED</span></div>';
+  }
+
+  function bind(answers,next,okText){
+    var input = document.getElementById("answer");
+    var button = document.getElementById("submit");
+
+    function go(){
+      attempts++;
+      var val = norm(input.value);
+      var ok = answers.some(function(a){ return norm(a) === val; });
+
+      if(ok){
+        feedback(okText,true);
+        status.textContent = "UNLOCKED";
+        setTimeout(function(){ show(next); },500);
+      }else{
+        feedback(attempts >= 3 ? "НЕВЕРНЫЙ КЛЮЧ // СМОТРИ ВНИМАТЕЛЬНЕЕ" : "НЕВЕРНЫЙ КЛЮЧ",false);
+        input.focus();
+        input.select();
+      }
+    }
+
+    button.addEventListener("click",go);
+    input.addEventListener("keydown",function(e){
+      if(e.key === "Enter") go();
+    });
+  }
+
+  function show(n){
+    stage = n;
+    attempts = 0;
+    status.textContent = n === 5 ? "COMPLETE" : "LOCKED";
+
+    if(n === 0){
+      shell(
+        "IDENTITY CHECK / 01",
+        "Ты уже внутри.",
+        'Подсказок не будет. Они здесь и не нужны.<br><br>У системы есть один вопрос: <b>кто должен пройти дальше?</b>',
+        '<div class="bigcode">19 · 1 · 13 · 19 · 15 · 14</div>'+
+        '<div class="form"><input id="answer" type="text" autocomplete="off" autocapitalize="characters" placeholder="KEY"><button id="submit" type="button">ENTER</button></div>'+
+        '<div class="feedback" id="feedback"></div>',
+        "01"
+      );
+      bind(["SAMSON","САМСОН"],1,"IDENTITY CONFIRMED");
+    }
+
+    if(n === 1){
+      shell(
+        "OBSERVATION TEST / 02",
+        "Начало важнее конца.",
+        "Шесть строк. Один ключ. Ты уже видел правило.",
+        '<div class="lines">'+
+          '<div><b>К</b>аждый предмет когда-нибудь был сырьём.</div>'+
+          '<div><b>У</b> любого кода есть порядок чтения.</div>'+
+          '<div><b>Р</b>ешение почти всегда ближе, чем кажется.</div>'+
+          '<div><b>И</b>щи не смысл предложения, а структуру.</div>'+
+          '<div><b>Ц</b>енность скрывается в деталях.</div>'+
+          '<div><b>А</b> теперь назови источник.</div>'+
+        '</div>'+
+        '<div class="form"><input id="answer" type="text" autocomplete="off" placeholder="KEY"><button id="submit" type="button">ENTER</button></div>'+
+        '<div class="feedback" id="feedback"></div>',
+        "02"
+      );
+      bind(["КУРИЦА","CHICKEN"],2,"REWARD 01 UNLOCKED");
+    }
+
+    if(n === 2){
+      shell(
+        "REWARD UNLOCKED",
+        "Открой 01.",
+        'Не переходи дальше, пока коробка <b>01</b> не открыта.',
+        '<div class="prize"><small>PACKAGE</small><strong>01</strong></div>'+
+        '<button id="continue" type="button">01 ОТКРЫТА</button>',
+        "03"
+      );
+      document.getElementById("continue").addEventListener("click",function(){ show(3); });
+    }
+
+    if(n === 3){
+      shell(
+        "MATERIAL CHECK / 03",
+        "Это ещё не конец.",
+        'Первый приз был биологическим. Второй — синтетический.<br><br>Следующий ключ перед тобой. <b>A = 1.</b>',
+        '<div class="bigcode">16 · 12 · 1</div>'+
+        '<div class="form"><input id="answer" type="text" autocomplete="off" autocapitalize="characters" placeholder="KEY"><button id="submit" type="button">ENTER</button></div>'+
+        '<div class="feedback" id="feedback"></div>',
+        "04"
+      );
+      bind(["PLA","ПЛА"],4,"FINAL SEQUENCE ARMED");
+    }
+
+    if(n === 4){
+      shell(
+        "FINAL / PRODUCTION",
+        "Открой 02.",
+        'Там находится сырьё. После того как увидишь его, нажми кнопку ниже.',
+        '<div class="prize"><small>PACKAGE</small><strong>02</strong></div>'+
+        '<button id="reveal" type="button">СЫРЬЁ ПОЛУЧЕНО</button>'+
+        '<div id="finalArea"></div>',
+        "05"
+      );
+      document.getElementById("reveal").addEventListener("click",function(){
+        show(5);
+      });
+    }
+
+    if(n === 5){
+      shell(
+        "MISSING HARDWARE DETECTED",
+        "SAMSON INDUSTRIES",
+        "Производственная линия готова к запуску.",
+        '<div class="specgrid">'+
+          '<div class="spec"><small>BUILD VOLUME</small><b>180³</b></div>'+
+          '<div class="spec"><small>MATERIAL</small><b>PLA</b></div>'+
+          '<div class="spec"><small>STATUS</small><b>READY</b></div>'+
+          '<div class="spec"><small>PACKAGE</small><b>03</b></div>'+
+        '</div>'+
+        '<h1 style="margin-top:34px">BAMBU LAB<br>A1 MINI</h1>'+
+        '<div class="copy">SAMSON INDUSTRIES IS NOW ONLINE.</div>'+
+        '<div class="prize"><small>FINAL PACKAGE</small><strong>03</strong></div>',
+        "06"
+      );
+      status.textContent = "COMPLETE";
+    }
+  }
+
+  /* First screen already exists as static HTML. We only bind its controls. */
+  bind(["SAMSON","САМСОН"],1,"IDENTITY CONFIRMED");
+})();
+</script>
+</body>
+</html>
